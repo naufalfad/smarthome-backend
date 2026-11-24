@@ -1,0 +1,10 @@
+<svg viewBox="0 0 60 45" xmlns="http://www.w3.org/2000/svg">
+  <rect x="2" y="2" width="56" height="41" rx="5" fill="#F8FAFC" stroke="#64748B" stroke-width="2"/>
+  <!-- Oval Sink Bowl -->
+  <ellipse cx="30" cy="24" rx="22" ry="14" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5"/>
+  <!-- Drain -->
+  <circle cx="30" cy="24" r="3" fill="#64748B"/>
+  <!-- Faucet -->
+  <circle cx="30" cy="5" r="3" fill="#64748B"/>
+  <line x1="30" y1="5" x2="30" y2="12" stroke="#475569" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

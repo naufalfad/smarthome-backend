@@ -1,0 +1,11 @@
+<svg viewBox="0 0 70 70" xmlns="http://www.w3.org/2000/svg">
+  <rect x="2" y="2" width="66" height="66" rx="5" fill="#E2E8F0" stroke="#64748B" stroke-width="2.5"/>
+  <!-- Interior cooling shelf line -->
+  <line x1="35" y1="4" x2="35" y2="66" stroke="#94A3B8" stroke-width="1.5"/>
+  <!-- Door split line and handle bevels -->
+  <rect x="30" y="58" width="4" height="9" rx="1.5" fill="#475569"/>
+  <rect x="36" y="58" width="4" height="9" rx="1.5" fill="#475569"/>
+  <!-- Top vents -->
+  <line x1="8" y1="8" x2="62" y2="8" stroke="#CBD5E1" stroke-width="1"/>
+  <line x1="8" y1="12" x2="62" y2="12" stroke="#CBD5E1" stroke-width="1"/>
+</svg>

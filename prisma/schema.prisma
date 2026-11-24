@@ -1,0 +1,877 @@
+// Prisma schema for 3D Smart Home Monitoring Platform
+// Phase 4: Room & Object Identification
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ModelStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum IdentificationStatus {
+  UNIDENTIFIED
+  SUGGESTED
+  IDENTIFIED
+  NEEDS_REVIEW
+}
+
+enum IdentifiedNodeType {
+  ROOM
+  OBJECT
+  ANCHOR
+}
+
+enum RoomType {
+  LIVING_ROOM
+  BEDROOM
+  KITCHEN
+  BATHROOM
+  DINING_ROOM
+  WORKSPACE
+  GARAGE
+  OTHER
+}
+
+/// 3D House Model representation (GLB/GLTF Dollhouse Asset)
+model HouseModel {
+  id              String                @id @default(uuid())
+  name            String
+  description     String?
+  fileName        String                // Original uploaded file name
+  filePath        String                // Safe relative file path (e.g., uploads/house-models/...)
+  fileSize        Int                   // Size in bytes
+  mimeType        String                @default("model/gltf-binary")
+  thumbnailPath   String?               // Relative path to generated/uploaded thumbnail
+  status          ModelStatus           @default(DRAFT)
+  modelMetadata   Json?                 // Structured GLB inspection manifest (nodes, meshes, materials, bounds)
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  rooms           Room[]
+  identifications NodeIdentification[]
+
+  @@map("house_models")
+}
+
+/// Node Identification entity (Phase 4)
+/// Maps raw GLB nodes to semantic room, object, and anchor entities
+model NodeIdentification {
+  id                 String                @id @default(uuid())
+  houseModelId       String
+  nodeName           String                // Original GLB node name e.g. "ROOM_LIVING", "OBJ_AC_01", "ANCHOR_TEMP_01"
+  stableId           String                // Deterministic identifier e.g. "modelId:nodeName"
+  displayName        String                // Human-readable display name e.g. "Living Room"
+  nodeType           IdentifiedNodeType    // ROOM, OBJECT, ANCHOR
+  category           String                // Category code e.g. "LIVING_ROOM", "SMART_AC", "TEMPERATURE_HUMIDITY"
+  suggestedCategory  String?               // Suggested category code from rule-based engine
+  status             IdentificationStatus  @default(SUGGESTED)
+  parentRoom         String?               // Parent room node name / display name from GLB hierarchy
+  parentFloor        String?               // Parent floor node name / display name from GLB hierarchy
+  description        String?
+  revalidationStatus String?               // MATCHED, NEW_NODE, MISSING_NODE, NEEDS_REVIEW
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  houseModel         HouseModel            @relation(fields: [houseModelId], references: [id], onDelete: Cascade)
+
+  @@unique([houseModelId, nodeName])
+  @@index([houseModelId, nodeType])
+  @@index([houseModelId, status])
+  @@map("node_identifications")
+}
+
+/// Architectural room spatial zone within a house model or 2D floor (Phase 3)
+model Room {
+  id                 String            @id @default(uuid())
+  houseModelId       String?
+  floorId            String?
+  name               String
+  type               RoomType          @default(OTHER)
+  floor              Int               @default(1)
+  color              String?           // Accent/fill color for 2D/3D zone highlight
+  polygonCoordinates Json?             // Array of { x: number, y: number } in SVG world coordinates
+  areaSquareMeters   Float?            // Calculated area in m² based on pixelsPerMeter
+  isActive           Boolean           @default(true)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  houseModel         HouseModel?       @relation(fields: [houseModelId], references: [id], onDelete: Cascade)
+  floorRel           Floor?            @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  devices            Device[]
+  floorPlanObjects   FloorPlanObject[]
+
+  @@index([floorId])
+  @@map("rooms")
+}
+
+/// IoT device entity placed on a 2D floor plan for interactive monitoring & control
+model Device {
+  id                String   @id @default(uuid())
+  name              String
+  type              String   @default("LIGHT") // LIGHT, SMART_LOCK, THERMOSTAT, AIR_CONDITIONER, SECURITY_CAMERA, MOTION_SENSOR, SMART_PLUG, SENSOR, etc.
+  status            String   @default("OFFLINE") // Runtime telemetry status (ON, OFF, LOCKED, etc.)
+  integrationStatus String   @default("UNCONFIGURED") // UNCONFIGURED, SIMULATED, ONLINE, OFFLINE
+  
+  // Placement coordinates
+  x                 Float    @default(0) // SVG world coordinate X
+  y                 Float    @default(0) // SVG world coordinate Y
+  normalizedX       Float    @default(0) // Relative 0..1 normalized coordinate
+  normalizedY       Float    @default(0) // Relative 0..1 normalized coordinate
+  rotation          Float    @default(0) // Rotation angle in degrees
+  iconWidth         Float    @default(48) // Visual display width on canvas in SVG units
+  iconHeight        Float    @default(48) // Visual display height on canvas in SVG units
+
+  // Optional manual room / location name (no polygon required)
+  manualRoomName    String?
+  
+  // Custom configuration & settings (e.g. target temp, schedule, sensitivity)
+  configuration     Json?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Phase 6 Hardware Abstraction & Provider Layer
+  providerType      String   @default("VIRTUAL") // "VIRTUAL", "ESP32", "MQTT", "HTTP", etc.
+  providerConfig    Json?
+  connectionStatus  String   @default("ONLINE") // "ONLINE", "OFFLINE", "UNKNOWN"
+  lastSeenAt        DateTime? @default(now())
+
+  // Structural relations
+  houseId           String?
+  floorId           String?
+  floorPlanId       String?
+  roomId            String?  // Nullable spatial room relation
+  catalogItemId     String?  // Nullable relation to standard IoT catalog item (Phase 4)
+
+  house             House?              @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  floor             Floor?              @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  floorPlan         FloorPlan?          @relation(fields: [floorPlanId], references: [id], onDelete: Cascade)
+  room              Room?               @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  catalogItem       DeviceCatalogItem?  @relation(fields: [catalogItemId], references: [id], onDelete: SetNull)
+  telemetry         DeviceTelemetry[]
+  commands          DeviceCommand[]
+
+  @@index([houseId])
+  @@index([floorId])
+  @@index([floorPlanId])
+  @@index([roomId])
+  @@index([catalogItemId])
+  @@map("devices")
+}
+
+/// Standard IoT device catalog definition (Phase 4)
+model DeviceCatalogItem {
+  id                    String   @id @default(uuid())
+  name                  String
+  deviceType            String   @unique // e.g. "SMART_LIGHT", "SMART_DIMMER", "SMART_AC", "SMART_LOCK", "TEMP_HUMIDITY_SENSOR", "AIR_QUALITY_SENSOR"
+  category              String   // "LIGHTING", "CLIMATE", "SECURITY", "SENSORS"
+  description           String?
+  icon                  String   // e.g. "lightbulb", "wind", "lock", "thermometer", "activity"
+  color                 String?  @default("#8B5CF6")
+  defaultWidth          Float    @default(48)
+  defaultHeight         Float    @default(48)
+  capabilities          Json     // Array of DeviceCapability
+  defaultConfiguration Json     // Default configuration object matching capabilities
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  devices               Device[]
+
+  @@index([category])
+  @@index([isActive])
+  @@map("device_catalog_items")
+}
+
+/// Time-series telemetry readings from IoT devices or background simulation engine (Phase 5 & 6)
+model DeviceTelemetry {
+  id           String   @id @default(uuid())
+  deviceId     String
+  timestamp    DateTime @default(now())
+  metricType   String   // "temperature", "humidity", "aqi", "pm25", "pm10", "power", "lockState", "brightness", etc.
+  value        Float?   // Numeric measurement value (e.g. 24.5, 60, 42)
+  unit         String?  // Unit symbol (e.g. "°C", "%", "AQI", "µg/m³")
+  stringValue  String?  // String state (e.g. "LOCKED", "ON", "COOL")
+  data         Json?    // Optional structured snapshot payload
+  isSimulated  Boolean  @default(true)
+  providerType String?  @default("VIRTUAL") // "VIRTUAL", "ESP32", "MQTT", "HTTP", etc.
+
+  device       Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, timestamp])
+  @@index([deviceId, metricType])
+  @@map("device_telemetry")
+}
+
+/// Standardized IoT Device Command execution history & lifecycle tracking (Phase 6)
+model DeviceCommand {
+  id              String    @id @default(uuid())
+  deviceId        String
+  commandType     String    // e.g. "SET_POWER", "SET_BRIGHTNESS", "SET_TEMPERATURE", "LOCK", "UNLOCK", "SET_MODE", "SET_FAN_SPEED"
+  payload         Json
+  status          String    @default("PENDING") // PENDING, PROCESSING, SUCCESS, FAILED
+  errorMessage    String?
+  executionResult Json?
+  createdAt       DateTime  @default(now())
+  completedAt     DateTime?
+
+  device          Device    @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, createdAt])
+  @@index([deviceId, status])
+  @@map("device_commands")
+}
+
+// ==========================================
+// 2D INTERACTIVE FLOOR PLAN & PROPERTY DOMAIN (PHASE 2 & PHASE 3)
+// ==========================================
+
+enum PropertyType {
+  HOUSE
+  APARTMENT
+  VILLA
+  OFFICE
+  SHOPHOUSE
+  OTHER
+}
+
+enum PropertySetupStatus {
+  DRAFT
+  SURVEYING
+  CONFIGURING
+  TESTING
+  READY_FOR_HANDOVER
+  ACTIVE
+  ARCHIVED
+}
+
+/// Property / House entity representing a customer-owned property (1:N CustomerProfile -> House)
+model House {
+  id              String              @id @default(uuid())
+  name            String
+  description     String?
+  address         String?             // Nullable initially to preserve legacy data & onboarding
+  propertyType    PropertyType        @default(HOUSE)
+  hasPhysicalIot  Boolean             @default(true) // Supports properties with and without physical IoT devices
+  setupStatus     PropertySetupStatus @default(DRAFT)
+  customerId      String?             // Official owning CustomerProfile FK (nullable for unresolved legacy properties)
+  clientName      String?             // Legacy display name (retained for backward compatibility)
+  clientEmail     String?             // Legacy display email (retained for backward compatibility)
+  publishStatus   String              @default("DRAFT") // DRAFT, PREVIEW, PUBLISHED (legacy compatibility)
+  publishedAt     DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  customer        CustomerProfile?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  floors          Floor[]
+  devices         Device[]
+  automationRules AutomationRule[]
+  users           User[]              // Deprecated legacy User.houseId inverse relation
+  serviceOrders   ServiceOrder[]
+
+  @@index([customerId])
+  @@index([setupStatus])
+  @@map("houses")
+}
+
+/// Floor vertical division of a house
+model Floor {
+  id          String      @id @default(uuid())
+  houseId     String
+  name        String      // e.g. "Ground Floor", "Lantai 2"
+  levelNumber Int         @default(1)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  house       House       @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  floorPlan   FloorPlan?
+  rooms       Room[]
+  devices     Device[]
+
+  @@unique([houseId, levelNumber])
+  @@map("floors")
+}
+
+/// Visual Floor Plan canvas reference and calibration configuration
+model FloorPlan {
+  id                  String             @id @default(uuid())
+  floorId             String             @unique
+  name                String             @default("Main Floor Plan")
+  imagePath           String?            // e.g. "uploads/floor-plans/..."
+  imageWidth          Float?             // Intrinsic pixel width of background
+  imageHeight         Float?             // Intrinsic pixel height of background
+  imageSize           Int?               // In bytes
+  imageMimeType       String?            // image/png, image/jpeg, image/svg+xml
+  pixelsPerMeter      Float?             // Scale ratio e.g. 50 px / meter (legacy metadata)
+  isCalibrated        Boolean            @default(false)
+  calibrationPoints   Json?              // { point1: {x,y}, point2: {x,y}, distanceMeters: Float }
+  viewBoxX            Float              @default(0)
+  viewBoxY            Float              @default(0)
+  viewBoxWidth        Float              @default(1600)
+  viewBoxHeight       Float              @default(1000)
+  backgroundOpacity   Float              @default(1.0)
+  isBackgroundVisible Boolean            @default(true)
+  gridSnap            Boolean            @default(true)
+  publishStatus       String             @default("DRAFT") // DRAFT, PREVIEW, PUBLISHED
+  publishedAt         DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  floor               Floor              @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  objects             FloorPlanObject[]
+  devices             Device[]
+
+  @@map("floor_plans")
+}
+
+/// Catalog of standard 2D visual symbols and assets
+model ObjectCatalogItem {
+  id            String             @id @default(uuid())
+  name          String
+  category      String             // LIVING_ROOM, BEDROOM, KITCHEN, BATHROOM, GENERAL
+  assetPath     String             // Relative file path or asset key
+  svgContent    String?            @db.Text // Standalone inline top-view SVG representation
+  defaultWidth  Float              @default(80)
+  defaultHeight Float              @default(80)
+  description   String?
+  isActive      Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  instances     FloorPlanObject[]
+
+  @@index([category])
+  @@map("object_catalog_items")
+}
+
+/// Interactive 2D object instance placed on a floor plan canvas
+model FloorPlanObject {
+  id              String             @id @default(uuid())
+  floorPlanId     String
+  catalogObjectId String?
+  name            String
+  category        String             // LIVING_ROOM, BEDROOM, KITCHEN, BATHROOM, GENERAL
+  x               Float              @default(0)
+  y               Float              @default(0)
+  width           Float              @default(80)
+  height          Float              @default(80)
+  rotation        Float              @default(0)
+  zIndex          Int                @default(1)
+  roomId          String?
+  properties      Json?              // Additional custom attributes (colors, labels, etc.)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  floorPlan       FloorPlan          @relation(fields: [floorPlanId], references: [id], onDelete: Cascade)
+  catalogObject   ObjectCatalogItem? @relation(fields: [catalogObjectId], references: [id], onDelete: SetNull)
+  room            Room?              @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  @@index([floorPlanId])
+  @@index([category])
+  @@map("floor_plan_objects")
+}
+
+// ==========================================
+// SMART HOME AUTOMATION ENGINE (PHASE 7)
+// ==========================================
+
+/// Automation rule defining IF (conditions) -> THEN (actions)
+model AutomationRule {
+  id                  String                @id @default(uuid())
+  houseId             String?
+  name                String
+  description         String?
+  enabled             Boolean               @default(true)
+  priority            Int                   @default(0) // Higher number = higher priority
+  triggerType         String                @default("SENSOR") // "SENSOR", "DEVICE_STATE", "SCHEDULED", "HYBRID"
+  triggerMode         String                @default("WHEN_CONDITION_BECOMES_TRUE") // "WHEN_CONDITION_BECOMES_TRUE", "WHILE_CONDITION_IS_TRUE", "SCHEDULED"
+  conditionOperator   String                @default("ALL") // "ALL" (AND), "ANY" (OR)
+  conditions          Json                  // Array of RuleCondition objects
+  actions             Json                  // Array of RuleAction objects
+  cooldownSeconds     Int                   @default(60) // Cooldown between triggers to prevent flutter/spam
+  lastTriggeredAt     DateTime?
+  lastExecutionStatus String?               // "SUCCESS", "PARTIAL_SUCCESS", "FAILED", "SKIPPED"
+  executionCount      Int                   @default(0)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  house               House?                @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  executions          AutomationExecution[]
+
+  @@index([houseId])
+  @@index([enabled])
+  @@map("automation_rules")
+}
+
+/// Execution history record for an automation rule trigger
+model AutomationExecution {
+  id              String         @id @default(uuid())
+  ruleId          String
+  status          String         @default("PENDING") // "PENDING", "PROCESSING", "SUCCESS", "PARTIAL_SUCCESS", "FAILED", "SKIPPED"
+  triggerData     Json?          // Snapshot of condition metrics/states that caused the trigger
+  executionResult Json?          // Array of action execution outcomes and commandIds
+  errorMessage    String?        @db.Text
+  startedAt       DateTime       @default(now())
+  completedAt     DateTime?
+
+  rule            AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId])
+  @@index([status])
+  @@index([startedAt])
+  @@map("automation_executions")
+}
+
+// ==========================================
+// USER AUTHENTICATION, PROFILES & ACCESS CONTROL (PHASE 2 & PHASE 3)
+// ==========================================
+
+enum UserRole {
+  SUPER_ADMIN
+  TECHNICIAN
+  CUSTOMER
+}
+
+enum TechnicianAvailabilityStatus {
+  AVAILABLE
+  BUSY
+  ON_LEAVE
+  INACTIVE
+}
+
+/// User account entity for three-role authentication & identity management
+model User {
+  id                String             @id @default(uuid())
+  username          String?            @unique // Nullable for email-only CUSTOMER accounts; preserved for internal staff
+  email             String?            @unique // Unique normalized lowercase email (mandatory for CUSTOMER accounts)
+  name              String
+  phone             String?
+  password          String             // Salted hash (scrypt)
+  role              UserRole           @default(CUSTOMER)
+  isActive          Boolean            @default(true)
+  lastLoginAt       DateTime?
+  houseId           String?            // @deprecated Legacy 1-house link; official ownership is House.customerId
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  house             House?             @relation(fields: [houseId], references: [id], onDelete: SetNull)
+  customerProfile   CustomerProfile?
+  technicianProfile TechnicianProfile?
+  confirmedServiceOrders ServiceOrder[] @relation("OrderConfirmedByAdmin")
+  rejectedServiceOrders  ServiceOrder[] @relation("OrderRejectedByAdmin")
+  statusHistoryActions   ServiceOrderStatusHistory[]
+  assignedServiceOrders  ServiceOrderAssignment[] @relation("AssignmentAssignedByAdmin")
+  revokedServiceOrders   ServiceOrderAssignment[] @relation("AssignmentRevokedByAdmin")
+  verifiedSurveys        FieldSurvey[]            @relation("SurveyVerifiedByAdmin")
+  surveyHistoryActions   FieldSurveyHistory[]
+
+  @@index([role])
+  @@index([isActive])
+  @@index([houseId])
+  @@map("users")
+}
+
+/// Business profile for CUSTOMER users (1:1 User -> CustomerProfile, 1:N CustomerProfile -> House)
+model CustomerProfile {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  fullName       String
+  phone          String?
+  billingAddress String?
+  companyName    String?
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  houses         House[]
+  serviceOrders  ServiceOrder[]
+
+  @@map("customer_profiles")
+}
+
+/// Operational staff profile for TECHNICIAN users (1:1 User -> TechnicianProfile)
+model TechnicianProfile {
+  id                 String                       @id @default(uuid())
+  userId             String                       @unique
+  employeeCode       String?                      @unique
+  specialization     String?
+  serviceArea        String?
+  availabilityStatus TechnicianAvailabilityStatus @default(AVAILABLE)
+  createdAt          DateTime                     @default(now())
+  updatedAt          DateTime                     @updatedAt
+
+  user               User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceOrderAssignments ServiceOrderAssignment[]
+  fieldSurveys            FieldSurvey[]
+
+  @@index([availabilityStatus])
+  @@map("technician_profiles")
+}
+
+// =============================================================================
+// PHASE 6: COMMERCIAL SERVICE PACKAGE CATALOG & INCLUSIONS
+// =============================================================================
+
+enum PackageStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum ServiceInclusionCategory {
+  PROPERTY_SURVEY
+  FLOOR_PLAN_2D
+  IOT_DEVICE_CONFIGURATION
+  IOT_DEVICE_INSTALLATION
+  AUTOMATION_CONFIGURATION
+  SMART_HOME_DASHBOARD
+  THREE_D_MODEL
+  GLB_ASSET_PREPARATION
+  TRAINING_AND_HANDOVER
+  OTHER
+}
+
+/// Commercial Service Package catalog definition (Phase 6)
+model ServicePackage {
+  id                  String                    @id @default(uuid())
+  name                String
+  code                String                    @unique
+  shortDescription    String
+  description         String                    @db.Text
+  price               Decimal                   @db.Decimal(12, 2)
+  currency            String                    @default("IDR")
+  estimatedDuration   String?
+  status              PackageStatus             @default(DRAFT)
+  displayOrder        Int                       @default(0)
+  imageUrl            String?
+  maxRooms            Int?
+  maxDevices          Int?
+  includedAutomations Int?
+  hasPhysicalIot      Boolean                   @default(false)
+  hasThreeD           Boolean                   @default(false)
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+
+  inclusions          ServicePackageInclusion[]
+  serviceOrders       ServiceOrder[]
+
+  @@index([status])
+  @@index([displayOrder])
+  @@map("service_packages")
+}
+
+/// Structured service inclusion breakdown for a ServicePackage (Phase 6)
+model ServicePackageInclusion {
+  id           String                   @id @default(uuid())
+  packageId    String
+  category     ServiceInclusionCategory @default(OTHER)
+  displayName  String
+  description  String?
+  isIncluded   Boolean                  @default(true)
+  quantity     Int?
+  metadata     Json?
+  displayOrder Int                      @default(0)
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+
+  package      ServicePackage           @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@index([packageId])
+  @@index([category])
+  @@map("service_package_inclusions")
+}
+
+// =============================================================================
+// PHASE 7: COMMERCIAL SERVICE ORDERS & CUSTOMER SUBMISSIONS
+// =============================================================================
+
+enum ServiceOrderStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  CANCELLED
+}
+
+/// Commercial Service Order representing a customer package purchase request (Phase 7)
+model ServiceOrder {
+  id                  String                      @id @default(uuid())
+  orderNumber         String                      @unique // e.g. "SO-2026-000001"
+
+  // Owning Customer (Strict Restrict deletion to prevent accidental loss of orders)
+  customerId          String
+  customer            CustomerProfile             @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  // Package relation & Immutable Snapshot
+  servicePackageId    String?
+  servicePackage      ServicePackage?             @relation(fields: [servicePackageId], references: [id], onDelete: SetNull)
+  packageSnapshot     Json                        // Complete immutable snapshot of package and inclusions at order time
+  packageName         String                      // Denormalized for rapid indexed querying
+  packageCode         String                      // Denormalized for rapid indexed querying
+  packagePrice        Decimal                     @db.Decimal(12, 2) // Canonical monetary amount
+  currency            String                      @default("IDR")
+
+  // Captured Customer Contact Snapshot (captured at submission time, immutable)
+  contactName         String?
+  contactPhone        String?
+
+  // Captured Property & Service Information (No active House entity created in Phase 7)
+  propertyName        String
+  propertyType        PropertyType                @default(HOUSE)
+  propertyAddress     String                      @db.Text
+  city                String?
+  postalCode          String?
+  approximateAreaM2   Decimal?                    @db.Decimal(8, 2)
+  estimatedRooms      Int?
+  hasPhysicalIot      Boolean                     @default(false)
+  customerNotes       String?                     @db.Text
+
+  // Optional link to existing property (for future upgrade / maintenance orders)
+  houseId             String?
+  house               House?                      @relation(fields: [houseId], references: [id], onDelete: SetNull)
+
+  // Status Lifecycle
+  status              ServiceOrderStatus          @default(PENDING)
+
+  // Decision Metadata & Audit Trail
+  confirmedAt         DateTime?
+  confirmedByAdminId  String?
+  confirmedByAdmin    User?                       @relation("OrderConfirmedByAdmin", fields: [confirmedByAdminId], references: [id], onDelete: SetNull)
+
+  rejectedAt          DateTime?
+  rejectedByAdminId   String?
+  rejectedByAdmin     User?                       @relation("OrderRejectedByAdmin", fields: [rejectedByAdminId], references: [id], onDelete: SetNull)
+  rejectionReason     String?                     @db.Text // Customer-visible explanation
+
+  cancelledAt         DateTime?
+  cancellationReason  String?                     @db.Text
+
+  adminNotes          String?                     @db.Text // Private internal Super Admin notes
+
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+
+  statusHistory       ServiceOrderStatusHistory[]
+  assignments         ServiceOrderAssignment[]
+  fieldSurvey         FieldSurvey?
+
+  @@index([customerId])
+  @@index([status])
+  @@index([orderNumber])
+  @@index([servicePackageId])
+  @@index([createdAt])
+  @@map("service_orders")
+}
+
+/// Append-only audit history for Service Order status transitions (Phase 7)
+model ServiceOrderStatusHistory {
+  id             String              @id @default(uuid())
+  serviceOrderId String
+  previousStatus ServiceOrderStatus? // Null for initial creation (null -> PENDING)
+  newStatus      ServiceOrderStatus
+  actorUserId    String?
+  actorRole      String              // CUSTOMER, SUPER_ADMIN, SYSTEM
+  reason         String?             @db.Text // Public/decision reason (e.g. rejection or cancellation reason)
+  notes          String?             @db.Text // Private internal note (Super Admin only, never exposed to customer)
+  createdAt      DateTime            @default(now())
+
+  serviceOrder   ServiceOrder        @relation(fields: [serviceOrderId], references: [id], onDelete: Cascade)
+  actorUser      User?               @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([serviceOrderId, createdAt])
+  @@map("service_order_status_history")
+}
+
+// =============================================================================
+// PHASE 8: TECHNICIAN ASSIGNMENT & SERVICE ORDER DISPATCH
+// =============================================================================
+
+enum AssignmentStatus {
+  ACTIVE
+  REVOKED
+  COMPLETED
+}
+
+/// Commercial Service Order Technician Assignment & Dispatch Audit Entity (Phase 8)
+model ServiceOrderAssignment {
+  id                     String            @id @default(uuid())
+  serviceOrderId         String
+  technicianProfileId    String
+  assignedByAdminId      String
+  status                 AssignmentStatus  @default(ACTIVE)
+  assignedAt             DateTime          @default(now())
+  revokedAt              DateTime?
+  revokedByAdminId       String?
+  completedAt            DateTime?
+  reassignmentReason     String?           @db.Text
+  technicianInstructions String?           @db.Text
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+
+  serviceOrder           ServiceOrder      @relation(fields: [serviceOrderId], references: [id], onDelete: Restrict)
+  technicianProfile      TechnicianProfile @relation(fields: [technicianProfileId], references: [id], onDelete: Restrict)
+  assignedByAdmin        User              @relation("AssignmentAssignedByAdmin", fields: [assignedByAdminId], references: [id], onDelete: Restrict)
+  revokedByAdmin         User?             @relation("AssignmentRevokedByAdmin", fields: [revokedByAdminId], references: [id], onDelete: Restrict)
+
+  @@index([serviceOrderId, status])
+  @@index([technicianProfileId, status])
+  @@index([assignedAt])
+  @@map("service_order_assignments")
+}
+
+// =============================================================================
+// PHASE 9: FIELD SURVEY EXECUTION & CANONICAL PROPERTY CREATION
+// =============================================================================
+
+enum FieldSurveyStatus {
+  DRAFT
+  SUBMITTED
+  VERIFIED
+  REVISION_REQUIRED
+}
+
+enum SurveyPhotoCategory {
+  MAIN_PANEL
+  SUB_PANEL
+  ELECTRICITY_METER
+  ROUTER_WIFI
+  ROOM_OVERVIEW
+  WALL_OUTLET
+  CEILING_OBSTACLE
+  OTHER
+}
+
+/// Commercial Field Survey entity bridging ServiceOrder to physical House (Phase 9)
+model FieldSurvey {
+  id                      String              @id @default(uuid())
+  serviceOrderId          String              @unique
+  assignmentId            String?
+  technicianProfileId     String
+  status                  FieldSurveyStatus   @default(DRAFT)
+
+  // Scheduling & Execution Timestamps
+  scheduledDate           DateTime?
+  surveyedAt              DateTime?
+  submittedAt             DateTime?
+  verifiedAt              DateTime?
+  verifiedByAdminId       String?
+
+  // Building & Structure Info
+  buildingType            String?             // e.g. "Rumah 2 Lantai", "Apartemen", "Ruko"
+  totalFloors             Int                 @default(1)
+  estimatedAreaM2         Decimal?            @db.Decimal(8, 2)
+  wallStructureMaterial   String?             // "BRICK", "DRYWALL", "CONCRETE", dll.
+  ceilingHeightMeters     Decimal?            @db.Decimal(4, 2)
+
+  // Electrical Infrastructure
+  mainBreakerAmps         Int?                // e.g. 10, 16, 25, 32, 50
+  mainsVoltageVolts       Decimal?            @db.Decimal(5, 1) // e.g. 220.5
+  groundingStatus         String?             // "VERIFIED_GOOD", "ABSENT", "HIGH_IMPEDANCE"
+  hasSubPanels            Boolean             @default(false)
+  subPanelLocations       String?
+  electricalNotes         String?             @db.Text
+
+  // Internet & Network Readiness
+  ispProvider             String?             // e.g. "IndiHome", "Biznet", "FirstMedia", "MyRepublic"
+  connectionType          String?             // "FIBER", "DSL", "WIRELESS"
+  measuredDownloadSpeed   Decimal?            @db.Decimal(6, 2) // Mbps
+  measuredUploadSpeed     Decimal?            @db.Decimal(6, 2) // Mbps
+  mainRouterLocation      String?
+  wifiCoverageRating      String?             // "EXCELLENT", "ADEQUATE", "POOR_DEAD_ZONES"
+  networkNotes            String?             @db.Text
+
+  // Technician Findings & Customer Preferences
+  customerSpecialRequests String?             @db.Text
+  installationObstacles   String?             @db.Text
+  technicianNotes         String?             @db.Text
+
+  // Admin Review & Verification
+  revisionReason          String?             @db.Text
+  adminReviewNotes        String?             @db.Text
+
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+
+  serviceOrder            ServiceOrder        @relation(fields: [serviceOrderId], references: [id], onDelete: Restrict)
+  technicianProfile       TechnicianProfile   @relation(fields: [technicianProfileId], references: [id], onDelete: Restrict)
+  verifiedByAdmin         User?               @relation("SurveyVerifiedByAdmin", fields: [verifiedByAdminId], references: [id], onDelete: Restrict)
+  rooms                   SurveyRoomItem[]
+  photos                  SurveyPhoto[]
+  history                 FieldSurveyHistory[]
+
+  @@index([status])
+  @@index([technicianProfileId])
+  @@map("field_surveys")
+}
+
+/// Structured room inventory item captured during field survey (Phase 9)
+model SurveyRoomItem {
+  id                 String       @id @default(uuid())
+  surveyId           String
+  roomName           String
+  roomType           RoomType     @default(OTHER)
+  floorLevel         Int          @default(1)
+  lengthMeters       Decimal?     @db.Decimal(5, 2)
+  widthMeters        Decimal?     @db.Decimal(5, 2)
+  heightMeters       Decimal?     @db.Decimal(4, 2)
+  wallOutletsCount   Int          @default(2)
+  lightSwitchesCount Int          @default(1)
+  existingAcUnits    Int          @default(0)
+  acUnitModel        String?
+  notes              String?
+  displayOrder       Int          @default(0)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  survey             FieldSurvey  @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  @@index([surveyId])
+  @@map("survey_room_items")
+}
+
+/// Internal operational photo captured during field survey (Phase 9)
+model SurveyPhoto {
+  id           String              @id @default(uuid())
+  surveyId     String
+  category     SurveyPhotoCategory @default(OTHER)
+  title        String
+  fileName     String
+  filePath     String              // Relative path: uploads/surveys/orders/{orderId}/...
+  fileSize     Int
+  mimeType     String
+  caption      String?
+  createdAt    DateTime            @default(now())
+
+  survey       FieldSurvey         @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+
+  @@index([surveyId])
+  @@index([category])
+  @@map("survey_photos")
+}
+
+/// Append-only audit history for Field Survey status transitions (Phase 9)
+model FieldSurveyHistory {
+  id             String             @id @default(uuid())
+  surveyId       String
+  previousStatus FieldSurveyStatus?
+  newStatus      FieldSurveyStatus
+  actorUserId    String
+  actorRole      String             // TECHNICIAN, SUPER_ADMIN
+  actionNote     String?            @db.Text
+  createdAt      DateTime           @default(now())
+
+  survey         FieldSurvey        @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  actorUser      User               @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([surveyId, createdAt])
+  @@map("field_survey_history")
+}

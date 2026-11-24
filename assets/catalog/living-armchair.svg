@@ -1,0 +1,10 @@
+<svg viewBox="0 0 75 75" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="3" width="69" height="69" rx="12" fill="#E2E8F0" stroke="#64748B" stroke-width="2"/>
+  <!-- Curved backrest -->
+  <path d="M 10 18 Q 37.5 8 65 18 L 65 26 Q 37.5 16 10 26 Z" fill="#CBD5E1" stroke="#64748B" stroke-width="1.5"/>
+  <!-- Armrests -->
+  <rect x="6" y="26" width="12" height="42" rx="4" fill="#CBD5E1" stroke="#64748B" stroke-width="1.5"/>
+  <rect x="57" y="26" width="12" height="42" rx="4" fill="#CBD5E1" stroke="#64748B" stroke-width="1.5"/>
+  <!-- Cushion -->
+  <rect x="20" y="27" width="35" height="40" rx="6" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1.5"/>
+</svg>

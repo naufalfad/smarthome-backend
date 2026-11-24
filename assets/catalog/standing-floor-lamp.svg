@@ -1,0 +1,10 @@
+<svg viewBox="0 0 45 45" xmlns="http://www.w3.org/2000/svg">
+  <!-- Tripod legs -->
+  <line x1="22.5" y1="22.5" x2="6" y2="38" stroke="#64748B" stroke-width="2"/>
+  <line x1="22.5" y1="22.5" x2="39" y2="38" stroke="#64748B" stroke-width="2"/>
+  <line x1="22.5" y1="22.5" x2="22.5" y2="6" stroke="#64748B" stroke-width="2"/>
+  <!-- Circular Shade -->
+  <circle cx="22.5" cy="22.5" r="14" fill="#FEF08A" stroke="#F59E0B" stroke-width="2"/>
+  <!-- Bulb element -->
+  <circle cx="22.5" cy="22.5" r="4" fill="#EAB308"/>
+</svg>

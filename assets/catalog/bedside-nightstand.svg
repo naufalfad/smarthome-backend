@@ -1,0 +1,8 @@
+<svg viewBox="0 0 45 45" xmlns="http://www.w3.org/2000/svg">
+  <rect x="2" y="2" width="41" height="41" rx="4" fill="#F8FAFC" stroke="#64748B" stroke-width="2"/>
+  <!-- Table lamp base & shade -->
+  <circle cx="22.5" cy="22.5" r="12" fill="#FEF08A" stroke="#EAB308" stroke-width="1.5"/>
+  <circle cx="22.5" cy="22.5" r="4" fill="#CA8A04"/>
+  <!-- Edge detail -->
+  <line x1="5" y1="36" x2="40" y2="36" stroke="#CBD5E1" stroke-width="1"/>
+</svg>

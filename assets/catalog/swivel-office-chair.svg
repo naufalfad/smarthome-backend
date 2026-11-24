@@ -1,0 +1,15 @@
+<svg viewBox="0 0 55 55" xmlns="http://www.w3.org/2000/svg">
+  <!-- 5-star caster base spokes -->
+  <line x1="27.5" y1="27.5" x2="27.5" y2="5" stroke="#94A3B8" stroke-width="2"/>
+  <line x1="27.5" y1="27.5" x2="49" y2="20" stroke="#94A3B8" stroke-width="2"/>
+  <line x1="27.5" y1="27.5" x2="41" y2="46" stroke="#94A3B8" stroke-width="2"/>
+  <line x1="27.5" y1="27.5" x2="14" y2="46" stroke="#94A3B8" stroke-width="2"/>
+  <line x1="27.5" y1="27.5" x2="6" y2="20" stroke="#94A3B8" stroke-width="2"/>
+  <!-- Seat cushion -->
+  <circle cx="27.5" cy="27.5" r="16" fill="#3B82F6" stroke="#1D4ED8" stroke-width="2"/>
+  <!-- Curved lumbar backrest -->
+  <path d="M 12 14 Q 27.5 8 43 14 L 43 20 Q 27.5 14 12 20 Z" fill="#1E293B" stroke="#0F172A" stroke-width="1.5"/>
+  <!-- Left and right armrests -->
+  <rect x="7" y="22" width="6" height="15" rx="2" fill="#475569"/>
+  <rect x="42" y="22" width="6" height="15" rx="2" fill="#475569"/>
+</svg>

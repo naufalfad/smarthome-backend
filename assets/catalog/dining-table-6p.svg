@@ -1,0 +1,12 @@
+<svg viewBox="0 0 140 80" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="3" width="134" height="74" rx="6" fill="#FDFBF7" stroke="#78350F" stroke-width="2.5"/>
+  <!-- Center runner -->
+  <rect x="14" y="24" width="112" height="32" rx="3" fill="#FEF3C7" stroke="#D97706" stroke-width="1"/>
+  <!-- 6 Placemats -->
+  <rect x="18" y="7" width="28" height="14" rx="2" fill="#E2E8F0" stroke="#CBD5E1" stroke-width="1"/>
+  <rect x="56" y="7" width="28" height="14" rx="2" fill="#E2E8F0" stroke="#CBD5E1" stroke-width="1"/>
+  <rect x="94" y="7" width="28" height="14" rx="2" fill="#E2E8F0" stroke="#CBD5E1" stroke-width="1"/>
+  <rect x="18" y="59" width="28" height="14" rx="2" fill="#E2E8F0" stroke="#CBD5E1" stroke-width="1"/>
+  <rect x="56" y="59" width="28" height="14" rx="2" fill="#E2E8F0" stroke="#CBD5E1" stroke-width="1"/>
+  <rect x="94" y="59" width="28" height="14" rx="2" fill="#E2E8F0" stroke="#CBD5E1" stroke-width="1"/>
+</svg>

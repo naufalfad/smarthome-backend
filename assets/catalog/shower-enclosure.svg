@@ -1,0 +1,16 @@
+<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+  <rect x="2" y="2" width="76" height="76" rx="4" fill="#F0FDF4" stroke="#16A34A" stroke-width="2"/>
+  <!-- Glass enclosure walls -->
+  <line x1="78" y1="2" x2="78" y2="78" stroke="#059669" stroke-width="2.5"/>
+  <line x1="2" y1="78" x2="78" y2="78" stroke="#059669" stroke-width="2.5"/>
+  <!-- Drain grate -->
+  <circle cx="40" cy="40" r="6" fill="#CBD5E1" stroke="#64748B" stroke-width="1.5"/>
+  <circle cx="40" cy="40" r="2" fill="#64748B"/>
+  <!-- Diagonal slope floor lines -->
+  <line x1="8" y1="8" x2="34" y2="34" stroke="#BBF7D0" stroke-width="1.5"/>
+  <line x1="72" y1="8" x2="46" y2="34" stroke="#BBF7D0" stroke-width="1.5"/>
+  <line x1="8" y1="72" x2="34" y2="46" stroke="#BBF7D0" stroke-width="1.5"/>
+  <line x1="72" y1="72" x2="46" y2="46" stroke="#BBF7D0" stroke-width="1.5"/>
+  <!-- Shower head at top left corner -->
+  <circle cx="14" cy="14" r="5" fill="#3B82F6"/>
+</svg>

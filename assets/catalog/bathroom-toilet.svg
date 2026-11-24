@@ -1,0 +1,9 @@
+<svg viewBox="0 0 45 65" xmlns="http://www.w3.org/2000/svg">
+  <!-- Water Cistern Tank at Top -->
+  <rect x="3" y="3" width="39" height="18" rx="3" fill="#F8FAFC" stroke="#64748B" stroke-width="2"/>
+  <circle cx="22.5" cy="8" r="2.5" fill="#CBD5E1" stroke="#94A3B8" stroke-width="1"/>
+  <!-- Toilet Bowl -->
+  <path d="M 8 21 C 8 45 12 61 22.5 61 C 33 61 37 45 37 21 Z" fill="#FFFFFF" stroke="#64748B" stroke-width="2"/>
+  <!-- Inner water pool -->
+  <ellipse cx="22.5" cy="40" rx="9" ry="12" fill="#E0F2FE" stroke="#38BDF8" stroke-width="1.5"/>
+</svg>

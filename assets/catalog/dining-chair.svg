@@ -1,0 +1,7 @@
+<svg viewBox="0 0 45 45" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="3" width="39" height="39" rx="6" fill="#F1F5F9" stroke="#64748B" stroke-width="2"/>
+  <!-- Backrest curve -->
+  <path d="M 6 8 Q 22.5 3 39 8 L 39 15 Q 22.5 10 6 15 Z" fill="#CBD5E1" stroke="#64748B" stroke-width="1.5"/>
+  <!-- Seat cushion inner -->
+  <rect x="8" y="16" width="29" height="23" rx="4" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1"/>
+</svg>

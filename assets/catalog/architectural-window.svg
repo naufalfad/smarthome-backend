@@ -1,0 +1,11 @@
+<svg viewBox="0 0 100 25" xmlns="http://www.w3.org/2000/svg">
+  <rect x="2" y="2" width="96" height="21" rx="2" fill="#F8FAFC" stroke="#64748B" stroke-width="2"/>
+  <!-- Left and right wall cut indicators -->
+  <line x1="12" y1="2" x2="12" y2="23" stroke="#334155" stroke-width="2.5"/>
+  <line x1="88" y1="2" x2="88" y2="23" stroke="#334155" stroke-width="2.5"/>
+  <!-- Glass panes -->
+  <line x1="16" y1="9" x2="52" y2="9" stroke="#38BDF8" stroke-width="2"/>
+  <line x1="48" y1="16" x2="84" y2="16" stroke="#38BDF8" stroke-width="2"/>
+  <!-- Window sill projection -->
+  <line x1="8" y1="23" x2="92" y2="23" stroke="#475569" stroke-width="1.5"/>
+</svg>

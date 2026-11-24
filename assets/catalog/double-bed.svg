@@ -1,0 +1,15 @@
+<svg viewBox="0 0 150 160" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="3" width="144" height="154" rx="8" fill="#F8FAFC" stroke="#64748B" stroke-width="2.5"/>
+  <!-- Headboard -->
+  <rect x="3" y="3" width="144" height="16" rx="4" fill="#94A3B8" stroke="#64748B" stroke-width="2"/>
+  <!-- Left & Right Pillows -->
+  <rect x="16" y="26" width="52" height="30" rx="6" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5"/>
+  <rect x="82" y="26" width="52" height="30" rx="6" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5"/>
+  <path d="M 30 41 Q 42 46 54 41" stroke="#CBD5E1" stroke-width="1.5" fill="none"/>
+  <path d="M 96 41 Q 108 46 120 41" stroke="#CBD5E1" stroke-width="1.5" fill="none"/>
+  <!-- Duvet -->
+  <rect x="8" y="70" width="134" height="82" rx="6" fill="#E2E8F0" stroke="#94A3B8" stroke-width="2"/>
+  <line x1="8" y1="70" x2="142" y2="70" stroke="#64748B" stroke-width="2"/>
+  <!-- Duvet fold pattern -->
+  <path d="M 20 110 Q 75 125 130 110" stroke="#CBD5E1" stroke-width="1.5" fill="none"/>
+</svg>

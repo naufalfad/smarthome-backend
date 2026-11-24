@@ -1,0 +1,40 @@
+{
+  "name": "smart-home-3d-backend",
+  "version": "1.0.0",
+  "description": "Backend API for 3D Smart Home Monitoring Platform",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "prisma:generate": "prisma generate",
+    "test:db": "tsx src/scripts/test-db.ts",
+    "seed:iot": "tsx src/scripts/seed-iot-catalog.ts"
+  },
+  "keywords": [
+    "smart-home",
+    "3d",
+    "iot",
+    "express",
+    "prisma"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "6.19.3",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.10",
+    "express": "^5.3.0",
+    "multer": "^2.5.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.3.0",
+    "@types/node": "^26.6.6",
+    "prisma": "6.19.3",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

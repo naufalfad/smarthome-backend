@@ -1,4 +1,8 @@
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
 import { prisma } from './db.service.js';
+import { DEVICES_3D_DIR } from '../utils/storage-path.util.js';
 import {
   DeviceCapability,
   DeviceCatalogDefinition,
@@ -99,6 +103,175 @@ export class DeviceCatalogService {
   static async getCapabilitiesByType(deviceType: string): Promise<DeviceCapability[]> {
     const catalogItem = await this.getCatalogByType(deviceType);
     return (catalogItem.capabilities as unknown as DeviceCapability[]) || [];
+  }
+
+  /**
+   * Create a new IoT device catalog item
+   */
+  static async createCatalogItem(data: {
+    name: string;
+    deviceType: string;
+    category: string;
+    description?: string;
+    icon?: string;
+    color?: string;
+    defaultWidth?: number;
+    defaultHeight?: number;
+    capabilities?: any[];
+    defaultConfiguration?: Record<string, any>;
+    placementTarget?: string;
+    defaultElevation?: number;
+    dimensionLength?: number;
+    dimensionWidth?: number;
+    dimensionHeight?: number;
+  }) {
+    const canonicalType = (data.deviceType || '').toUpperCase().trim();
+    return prisma.deviceCatalogItem.create({
+      data: {
+        name: data.name.trim(),
+        deviceType: canonicalType,
+        category: (data.category || 'LIGHTING').toUpperCase(),
+        description: data.description?.trim(),
+        icon: data.icon || 'lightbulb',
+        color: data.color || '#8B5CF6',
+        defaultWidth: data.defaultWidth ?? 48,
+        defaultHeight: data.defaultHeight ?? 48,
+        capabilities: (data.capabilities as any) || [],
+        defaultConfiguration: data.defaultConfiguration || {},
+        placementTarget: data.placementTarget || 'WALL',
+        defaultElevation: data.defaultElevation ?? 1.2,
+        dimensionLength: data.dimensionLength ?? 0.12,
+        dimensionWidth: data.dimensionWidth ?? 0.12,
+        dimensionHeight: data.dimensionHeight ?? 0.04,
+      },
+    });
+  }
+
+  /**
+   * Update an existing device catalog item
+   */
+  static async updateCatalogItem(
+    id: string,
+    data: Partial<{
+      name: string;
+      category: string;
+      description: string;
+      icon: string;
+      color: string;
+      defaultWidth: number;
+      defaultHeight: number;
+      capabilities: any[];
+      defaultConfiguration: Record<string, any>;
+      placementTarget: string;
+      defaultElevation: number;
+      dimensionLength: number;
+      dimensionWidth: number;
+      dimensionHeight: number;
+      isActive: boolean;
+    }>
+  ) {
+    await this.getCatalogById(id);
+
+    return prisma.deviceCatalogItem.update({
+      where: { id },
+      data: {
+        ...(data.name && { name: data.name.trim() }),
+        ...(data.category && { category: data.category.toUpperCase() }),
+        ...(data.description !== undefined && { description: data.description?.trim() }),
+        ...(data.icon && { icon: data.icon }),
+        ...(data.color && { color: data.color }),
+        ...(data.defaultWidth !== undefined && { defaultWidth: data.defaultWidth }),
+        ...(data.defaultHeight !== undefined && { defaultHeight: data.defaultHeight }),
+        ...(data.capabilities && { capabilities: data.capabilities as any }),
+        ...(data.defaultConfiguration && { defaultConfiguration: data.defaultConfiguration }),
+        ...(data.placementTarget && { placementTarget: data.placementTarget }),
+        ...(data.defaultElevation !== undefined && { defaultElevation: Number(data.defaultElevation) }),
+        ...(data.dimensionLength !== undefined && { dimensionLength: Number(data.dimensionLength) }),
+        ...(data.dimensionWidth !== undefined && { dimensionWidth: Number(data.dimensionWidth) }),
+        ...(data.dimensionHeight !== undefined && { dimensionHeight: Number(data.dimensionHeight) }),
+        ...(data.isActive !== undefined && { isActive: Boolean(data.isActive) }),
+      },
+    });
+  }
+
+  /**
+   * Delete or deactivate catalog item
+   */
+  static async deleteCatalogItem(id: string) {
+    const item = await this.getCatalogById(id);
+    const count = (item as any)._count?.devices || 0;
+    if (count > 0) {
+      // Soft-deactivate if in use by devices
+      return prisma.deviceCatalogItem.update({
+        where: { id },
+        data: { isActive: false },
+      });
+    }
+
+    // If GLB exists, delete file
+    if (item.modelGlbPath) {
+      const fullPath = path.resolve(DEVICES_3D_DIR, path.basename(item.modelGlbPath));
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+      }
+    }
+
+    return prisma.deviceCatalogItem.delete({
+      where: { id },
+    });
+  }
+
+  /**
+   * Save uploaded 3D GLB model for a device catalog item
+   */
+  static async save3dModel(id: string, fileBuffer: Buffer, originalName: string) {
+    const item = await this.getCatalogById(id);
+
+    // Create unique filename
+    const uniqueSuffix = crypto.randomUUID().slice(0, 8);
+    const safeBase = originalName
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .replace(/\.glb$/i, '')
+      .slice(0, 30);
+    const fileName = `dev3d-${safeBase}-${uniqueSuffix}.glb`;
+    const destPath = path.resolve(DEVICES_3D_DIR, fileName);
+
+    // Clean up old model if existed
+    if (item.modelGlbPath) {
+      const oldPath = path.resolve(DEVICES_3D_DIR, path.basename(item.modelGlbPath));
+      if (fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      }
+    }
+
+    // Write file
+    fs.writeFileSync(destPath, fileBuffer);
+
+    // Relative storage path stored in DB
+    const relativePath = `uploads/models-3d/devices/${fileName}`;
+
+    return prisma.deviceCatalogItem.update({
+      where: { id },
+      data: {
+        modelGlbPath: relativePath,
+      },
+    });
+  }
+
+  /**
+   * Get absolute path of 3D GLB model file for streaming
+   */
+  static async get3dModelPath(id: string): Promise<string | null> {
+    const item = await prisma.deviceCatalogItem.findUnique({
+      where: { id },
+      select: { modelGlbPath: true },
+    });
+
+    if (!item?.modelGlbPath) return null;
+
+    const fileName = path.basename(item.modelGlbPath);
+    const fullPath = path.resolve(DEVICES_3D_DIR, fileName);
+    return fs.existsSync(fullPath) ? fullPath : null;
   }
 }
 

@@ -8,6 +8,7 @@ import {
   streamBackgroundImage,
   saveCalibration,
   resetCalibration,
+  rotatePlan,
   listObjects,
   createObject,
   updateObject,
@@ -45,6 +46,9 @@ router.get('/:id/image', validateUuidParam('id'), streamBackgroundImage);
 // Scale calibration
 router.post('/:id/calibration', validateUuidParam('id'), saveCalibration);
 router.delete('/:id/calibration', validateUuidParam('id'), resetCalibration);
+
+// Floor plan orientation rotation (90 degrees clockwise)
+router.post('/:id/rotate', validateUuidParam('id'), rotatePlan);
 
 // Phase 3: Spatial Detection & Room Assignment
 router.get('/:id/spatial-detect', validateUuidParam('id'), RoomController.spatialDetect);

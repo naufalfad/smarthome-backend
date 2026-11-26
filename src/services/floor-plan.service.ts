@@ -338,6 +338,153 @@ export class FloorPlanService {
     return updated;
   }
 
+  /**
+   * Rotate floor plan clockwise by 90 degrees
+   * Transforms:
+   * - FloorPlan: rotation = (rotation + 90) % 360, imageWidth <-> imageHeight, viewBoxWidth <-> viewBoxHeight
+   * - Calibration points (if calibrated): (x, y) -> (H - y, x)
+   * - All Room polygons on this floor: for each vertex (x, y) -> (H - y, x)
+   * - All Devices placed on this floor plan:
+   *   (x, y) -> (H - y, x)
+   *   normalizedX = (H - y) / H
+   *   normalizedY = x / W
+   * - All FloorPlanObjects on this floor plan: (x, y) -> (H - y, x), width <-> height, rotation = (rotation + 90) % 360
+   */
+  static async rotatePlan(id: string) {
+    const plan = await prisma.floorPlan.findUnique({
+      where: { id },
+      include: {
+        floor: {
+          include: {
+            rooms: true,
+          },
+        },
+        objects: true,
+        devices: true,
+      },
+    });
+
+    if (!plan) {
+      throw new Error(`Floor plan with id '${id}' not found.`);
+    }
+
+    const origW = plan.imageWidth || plan.viewBoxWidth || 1600;
+    const origH = plan.imageHeight || plan.viewBoxHeight || 1000;
+    const newW = origH;
+    const newH = origW;
+    const newRotation = ((plan.rotation || 0) + 90) % 360;
+
+    return await prisma.$transaction(async (tx) => {
+      // 1. Transform calibration points if present
+      let newCalibrationPoints: any = plan.calibrationPoints;
+      if (plan.calibrationPoints && typeof plan.calibrationPoints === 'object') {
+        const cp = plan.calibrationPoints as any;
+        if (cp.point1 && cp.point2) {
+          newCalibrationPoints = {
+            ...cp,
+            point1: {
+              x: Math.round((origH - cp.point1.y) * 10) / 10,
+              y: Math.round(cp.point1.x * 10) / 10,
+            },
+            point2: {
+              x: Math.round((origH - cp.point2.y) * 10) / 10,
+              y: Math.round(cp.point2.x * 10) / 10,
+            },
+          };
+        }
+      }
+
+      // 2. Update FloorPlan entity
+      const updatedPlan = await tx.floorPlan.update({
+        where: { id },
+        data: {
+          rotation: newRotation,
+          imageWidth: newW,
+          imageHeight: newH,
+          viewBoxWidth: newW,
+          viewBoxHeight: newH,
+          viewBoxX: 0,
+          viewBoxY: 0,
+          calibrationPoints: newCalibrationPoints !== undefined ? newCalibrationPoints : undefined,
+        },
+        include: {
+          floor: {
+            include: {
+              house: true,
+            },
+          },
+          objects: {
+            orderBy: { zIndex: 'asc' },
+            include: {
+              catalogObject: true,
+            },
+          },
+          devices: true,
+        },
+      });
+
+      // 3. Transform Room polygons on this floor
+      if (plan.floor?.rooms) {
+        for (const room of plan.floor.rooms) {
+          if (room.polygonCoordinates && Array.isArray(room.polygonCoordinates)) {
+            const rotatedCoords = (room.polygonCoordinates as any[]).map((pt) => ({
+              x: Math.round((origH - pt.y) * 10) / 10,
+              y: Math.round(pt.x * 10) / 10,
+            }));
+            await tx.room.update({
+              where: { id: room.id },
+              data: {
+                polygonCoordinates: rotatedCoords,
+              },
+            });
+          }
+        }
+      }
+
+      // 4. Transform Devices
+      if (plan.devices) {
+        for (const dev of plan.devices) {
+          const newDevX = Math.round((origH - dev.y) * 10) / 10;
+          const newDevY = Math.round(dev.x * 10) / 10;
+          const newNormX = newW > 0 ? Math.max(0, Math.min(1, Math.round((newDevX / newW) * 10000) / 10000)) : 0;
+          const newNormY = newH > 0 ? Math.max(0, Math.min(1, Math.round((newDevY / newH) * 10000) / 10000)) : 0;
+
+          await tx.device.update({
+            where: { id: dev.id },
+            data: {
+              x: newDevX,
+              y: newDevY,
+              normalizedX: newNormX,
+              normalizedY: newNormY,
+            },
+          });
+        }
+      }
+
+      // 5. Transform Objects
+      if (plan.objects) {
+        for (const obj of plan.objects) {
+          const newObjX = Math.round((origH - obj.y) * 10) / 10;
+          const newObjY = Math.round(obj.x * 10) / 10;
+          const newObjRot = ((obj.rotation || 0) + 90) % 360;
+
+          await tx.floorPlanObject.update({
+            where: { id: obj.id },
+            data: {
+              x: newObjX,
+              y: newObjY,
+              width: obj.height,
+              height: obj.width,
+              rotation: newObjRot,
+            },
+          });
+        }
+      }
+
+      return updatedPlan;
+    });
+  }
+
   // ==========================================
   // OBJECT INSTANCE MANAGEMENT
   // ==========================================

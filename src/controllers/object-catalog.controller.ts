@@ -62,3 +62,85 @@ export async function streamCatalogAsset(req: Request, res: Response, next: Next
     next(err);
   }
 }
+
+export async function createObjectCatalogItem(req: Request, res: Response, next: NextFunction) {
+  try {
+    const item = await ObjectCatalogService.createCatalogItem(req.body);
+    res.status(201).json({
+      success: true,
+      message: 'Katalog furnitur / addon interior berhasil ditambahkan.',
+      data: item,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateObjectCatalogItem(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try {
+    const item = await ObjectCatalogService.updateCatalogItem(req.params.id, req.body);
+    res.json({
+      success: true,
+      message: 'Katalog furnitur / addon interior berhasil diperbarui.',
+      data: item,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteObjectCatalogItem(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try {
+    const result = await ObjectCatalogService.deleteCatalogItem(req.params.id);
+    res.json({
+      success: true,
+      message: 'Katalog furnitur / addon interior berhasil dihapus/dinonaktifkan.',
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function uploadObject3dModel(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tidak ada berkas model 3D .glb yang diunggah.',
+      });
+    }
+
+    const updated = await ObjectCatalogService.save3dModel(
+      req.params.id,
+      req.file.buffer,
+      req.file.originalname
+    );
+
+    res.json({
+      success: true,
+      message: 'Model 3D (.glb) furnitur berhasil disimpan.',
+      data: updated,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function streamObject3dModel(req: Request<{ id: string }>, res: Response, next: NextFunction) {
+  try {
+    const filePath = await ObjectCatalogService.get3dModelPath(req.params.id);
+    if (!filePath || !fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'Berkas model 3D (.glb) furnitur belum tersedia.',
+      });
+    }
+
+    res.setHeader('Content-Type', 'model/gltf-binary');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    fs.createReadStream(filePath).pipe(res);
+  } catch (err) {
+    next(err);
+  }
+}

@@ -27,7 +27,7 @@ export class RoomController {
     try {
       const floorId = req.params.floorId as string;
       await PropertyAccessPolicy.assertCanEditFloor(req.user, floorId);
-      const { name, type, color, polygonCoordinates } = req.body;
+      const { name, type, color, polygonCoordinates, ceilingHeight } = req.body;
 
       if (!name || typeof name !== 'string' || !name.trim()) {
         return sendError(res, 'Room name is required and must be a non-empty string', null, 400);
@@ -38,6 +38,7 @@ export class RoomController {
         type,
         color,
         polygonCoordinates,
+        ceilingHeight,
       });
 
       return sendSuccess(res, 'Room created successfully', room, 201);
@@ -69,13 +70,14 @@ export class RoomController {
     try {
       const id = req.params.id as string;
       await PropertyAccessPolicy.assertCanEditRoom(req.user, id);
-      const { name, type, color, isActive } = req.body;
+      const { name, type, color, isActive, ceilingHeight } = req.body;
 
       const room = await RoomService.updateRoom(id, {
         name,
         type,
         color,
         isActive,
+        ceilingHeight,
       });
 
       return sendSuccess(res, 'Room updated successfully', room);

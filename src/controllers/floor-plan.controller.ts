@@ -173,6 +173,23 @@ export async function resetCalibration(req: Request, res: Response, next: NextFu
   }
 }
 
+export async function rotatePlan(req: Request, res: Response, next: NextFunction) {
+  try {
+    const id = req.params.id as string;
+    await PropertyAccessPolicy.assertCanEditFloorPlan(req.user, id);
+
+    const plan = await FloorPlanService.rotatePlan(id);
+
+    res.json({
+      success: true,
+      message: 'Floor plan rotated 90 degrees successfully',
+      data: plan,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // ==========================================
 // OBJECT INSTANCES CONTROLLER
 // ==========================================

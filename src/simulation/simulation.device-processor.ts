@@ -18,7 +18,13 @@ import {
 export class SmartLightProcessor implements IDeviceProcessor {
   canProcess(type: string): boolean {
     const t = type.toUpperCase();
-    return t === 'SMART_LIGHT' || t === 'LIGHT' || t === 'SMART_DIMMER';
+    return (
+      t === 'SMART_LIGHT' ||
+      t === 'LIGHT' ||
+      t === 'SMART_DIMMER' ||
+      t === 'AUTO_DUSK_DAWN_LIGHT' ||
+      t === 'AUTO_PIR_NIGHT_LIGHT'
+    );
   }
 
   async processTick(device: any, _context: SimulationContext): Promise<DeviceSimulationResult> {
@@ -294,7 +300,15 @@ export class AirQualitySensorProcessor implements IDeviceProcessor {
 export class SwitchSocketProcessor implements IDeviceProcessor {
   canProcess(type: string): boolean {
     const t = type.toUpperCase();
-    return t === 'SWITCH' || t === 'SOCKET';
+    return (
+      t === 'SWITCH' ||
+      t === 'SOCKET' ||
+      t === 'SMART_SWITCH' ||
+      t === 'SMART_PLUG' ||
+      t === 'SMART_WATER_VALVE' ||
+      t === 'SMART_SIREN' ||
+      t === 'ENERGY_MONITOR'
+    );
   }
 
   async processTick(device: any, _context: SimulationContext): Promise<DeviceSimulationResult> {

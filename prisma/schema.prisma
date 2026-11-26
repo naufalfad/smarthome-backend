@@ -99,6 +99,7 @@ model Room {
   color              String?           // Accent/fill color for 2D/3D zone highlight
   polygonCoordinates Json?             // Array of { x: number, y: number } in SVG world coordinates
   areaSquareMeters   Float?            // Calculated area in m² based on pixelsPerMeter
+  ceilingHeight      Float             @default(3.0) // Ceiling height in meters for 3D extrusion (Tahap 2 & 3)
   isActive           Boolean           @default(true)
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
@@ -181,6 +182,15 @@ model DeviceCatalogItem {
   capabilities          Json     // Array of DeviceCapability
   defaultConfiguration Json     // Default configuration object matching capabilities
   isActive              Boolean  @default(true)
+  
+  // 3D Master Data Assets & Spatial Metrics
+  modelGlbPath          String?  // Relative path or storage key to .glb 3D model
+  placementTarget       String   @default("WALL") // "WALL", "CEILING", "FLOOR", "TABLETOP"
+  defaultElevation      Float    @default(1.2) // Meters from floor: e.g. 1.2m (switch), 2.2m (AC), 3.0m (ceiling light), 0.3m (outlet)
+  dimensionLength       Float    @default(0.12) // X size in meters
+  dimensionWidth        Float    @default(0.12) // Y size in meters
+  dimensionHeight       Float    @default(0.04) // Z size in meters
+
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
@@ -320,6 +330,7 @@ model FloorPlan {
   backgroundOpacity   Float              @default(1.0)
   isBackgroundVisible Boolean            @default(true)
   gridSnap            Boolean            @default(true)
+  rotation            Int                @default(0)
   publishStatus       String             @default("DRAFT") // DRAFT, PREVIEW, PUBLISHED
   publishedAt         DateTime?
   createdAt           DateTime           @default(now())
@@ -343,6 +354,15 @@ model ObjectCatalogItem {
   defaultHeight Float              @default(80)
   description   String?
   isActive      Boolean            @default(true)
+
+  // 3D Master Data Assets & Spatial Metrics
+  modelGlbPath          String?  // Relative path or storage key to .glb 3D model
+  placementTarget       String   @default("FLOOR") // "FLOOR", "WALL", "TABLETOP"
+  defaultElevation      Float    @default(0.0) // Meters from floor
+  dimensionLength       Float    @default(1.0) // X size in meters
+  dimensionWidth        Float    @default(1.0) // Y size in meters
+  dimensionHeight       Float    @default(0.8) // Z size in meters
+
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 

@@ -14,17 +14,20 @@ declare global {
 
 function extractBearerToken(req: Request): string | null {
   const authHeader = req.headers['authorization'];
-  if (!authHeader || typeof authHeader !== 'string') {
-    return null;
+  if (authHeader && typeof authHeader === 'string') {
+    const trimmed = authHeader.trim();
+    if (trimmed.toLowerCase().startsWith('bearer ')) {
+      const token = trimmed.substring(7).trim();
+      if (token.length > 0) return token;
+    }
   }
 
-  const trimmed = authHeader.trim();
-  if (!trimmed.toLowerCase().startsWith('bearer ')) {
-    return null;
+  // Query parameter fallback for streaming media & 3D GLB canvas assets
+  if (typeof req.query?.token === 'string' && req.query.token.trim().length > 0) {
+    return req.query.token.trim();
   }
 
-  const token = trimmed.substring(7).trim();
-  return token.length > 0 ? token : null;
+  return null;
 }
 
 /**

@@ -29,6 +29,11 @@ export async function seedIoTDeviceCatalog() {
         capabilities: item.capabilities as any,
         defaultConfiguration: item.defaultConfiguration,
         isActive: true,
+        placementTarget: item.category === 'LIGHTING' ? 'CEILING' : item.category === 'CLIMATE' ? 'WALL' : 'WALL',
+        defaultElevation: item.category === 'LIGHTING' ? 3.0 : item.category === 'CLIMATE' ? 2.2 : item.name.toLowerCase().includes('lock') ? 1.0 : 1.2,
+        dimensionLength: item.category === 'CLIMATE' ? 0.85 : 0.12,
+        dimensionWidth: item.category === 'CLIMATE' ? 0.3 : 0.12,
+        dimensionHeight: item.category === 'CLIMATE' ? 0.25 : 0.04,
       },
       create: {
         deviceType: item.deviceType,
@@ -42,6 +47,11 @@ export async function seedIoTDeviceCatalog() {
         capabilities: item.capabilities as any,
         defaultConfiguration: item.defaultConfiguration,
         isActive: true,
+        placementTarget: item.category === 'LIGHTING' ? 'CEILING' : item.category === 'CLIMATE' ? 'WALL' : 'WALL',
+        defaultElevation: item.category === 'LIGHTING' ? 3.0 : item.category === 'CLIMATE' ? 2.2 : item.name.toLowerCase().includes('lock') ? 1.0 : 1.2,
+        dimensionLength: item.category === 'CLIMATE' ? 0.85 : 0.12,
+        dimensionWidth: item.category === 'CLIMATE' ? 0.3 : 0.12,
+        dimensionHeight: item.category === 'CLIMATE' ? 0.25 : 0.04,
       },
     });
 

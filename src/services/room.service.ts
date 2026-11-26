@@ -13,12 +13,14 @@ export interface CreateRoomDto {
   type?: RoomType;
   color?: string;
   polygonCoordinates?: Point[];
+  ceilingHeight?: number;
 }
 
 export interface UpdateRoomDto {
   name?: string;
   type?: RoomType;
   color?: string;
+  ceilingHeight?: number;
   isActive?: boolean;
 }
 
@@ -142,6 +144,7 @@ export class RoomService {
         color,
         polygonCoordinates: sanitizedCoords ? (sanitizedCoords as any) : undefined,
         areaSquareMeters: areaM2,
+        ceilingHeight: data.ceilingHeight != null ? Math.max(Number(data.ceilingHeight), 1.0) : 3.0,
         isActive: true,
       },
       include: {
@@ -168,6 +171,7 @@ export class RoomService {
         ...(data.name !== undefined && { name: data.name.trim() }),
         ...(data.type !== undefined && { type: data.type }),
         ...(data.color !== undefined && { color: data.color }),
+        ...(data.ceilingHeight !== undefined && { ceilingHeight: Math.max(Number(data.ceilingHeight), 1.0) }),
         ...(data.isActive !== undefined && { isActive: data.isActive }),
       },
       include: {

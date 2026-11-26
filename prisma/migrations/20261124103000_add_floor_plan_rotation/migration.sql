@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "floor_plans" ADD COLUMN IF NOT EXISTS "rotation" INTEGER NOT NULL DEFAULT 0;

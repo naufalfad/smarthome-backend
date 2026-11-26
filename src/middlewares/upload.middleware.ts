@@ -73,3 +73,25 @@ export const uploadSurveyPhotoFile = multer({
   },
 });
 
+/**
+ * 3D Catalog Model Upload (.glb only, up to 50MB)
+ */
+export const uploadCatalog3dGlb = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB
+  },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext !== '.glb') {
+      return cb(
+        new Error(
+          `Format berkas '${ext}' tidak didukung. Harap unggah model 3D dalam format biner GLB (.glb).`
+        )
+      );
+    }
+    cb(null, true);
+  },
+});
+
+

@@ -24,6 +24,9 @@ export const FLOOR_PLANS_DIR = path.resolve(UPLOADS_DIR, 'floor-plans');
 export const HOUSE_MODELS_DIR = path.resolve(UPLOADS_DIR, 'house-models');
 export const THUMBNAILS_DIR = path.resolve(UPLOADS_DIR, 'thumbnails');
 export const SURVEYS_DIR = path.resolve(UPLOADS_DIR, 'surveys');
+export const MODELS_3D_DIR = path.resolve(UPLOADS_DIR, 'models-3d');
+export const DEVICES_3D_DIR = path.resolve(MODELS_3D_DIR, 'devices');
+export const FURNITURE_3D_DIR = path.resolve(MODELS_3D_DIR, 'furniture');
 
 // Root fallback uploads directory (retained non-destructively for backward compatibility)
 export const ROOT_UPLOADS_DIR = path.resolve(PROJECT_ROOT, 'uploads');
@@ -39,6 +42,9 @@ export function ensureStorageDirectoriesExist() {
     HOUSE_MODELS_DIR,
     THUMBNAILS_DIR,
     SURVEYS_DIR,
+    MODELS_3D_DIR,
+    DEVICES_3D_DIR,
+    FURNITURE_3D_DIR,
   ];
 
   dirs.forEach((dir) => {

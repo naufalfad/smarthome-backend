@@ -601,6 +601,11 @@ async function main() {
         defaultHeight: item.defaultHeight,
         description: item.description,
         isActive: true,
+        placementTarget: item.slug.includes('wall') ? 'WALL' : item.slug.includes('ceiling') ? 'CEILING' : 'FLOOR',
+        defaultElevation: item.slug.includes('wall') ? 1.4 : item.slug.includes('ceiling') ? 3.0 : 0.0,
+        dimensionLength: parseFloat((item.defaultWidth * 0.012).toFixed(2)),
+        dimensionWidth: parseFloat((item.defaultHeight * 0.012).toFixed(2)),
+        dimensionHeight: item.slug.includes('sofa') ? 0.85 : item.slug.includes('bed') ? 0.65 : item.slug.includes('table') ? 0.75 : item.slug.includes('wardrobe') ? 2.0 : 0.8,
       },
       create: {
         id: item.id,
@@ -612,6 +617,11 @@ async function main() {
         defaultHeight: item.defaultHeight,
         description: item.description,
         isActive: true,
+        placementTarget: item.slug.includes('wall') ? 'WALL' : item.slug.includes('ceiling') ? 'CEILING' : 'FLOOR',
+        defaultElevation: item.slug.includes('wall') ? 1.4 : item.slug.includes('ceiling') ? 3.0 : 0.0,
+        dimensionLength: parseFloat((item.defaultWidth * 0.012).toFixed(2)),
+        dimensionWidth: parseFloat((item.defaultHeight * 0.012).toFixed(2)),
+        dimensionHeight: item.slug.includes('sofa') ? 0.85 : item.slug.includes('bed') ? 0.65 : item.slug.includes('table') ? 0.75 : item.slug.includes('wardrobe') ? 2.0 : 0.8,
       },
     });
   }

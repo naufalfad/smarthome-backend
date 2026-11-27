@@ -137,6 +137,28 @@ export function hasSelfIntersections(vertices: Point[]): boolean {
 }
 
 /**
+ * Attempts to repair/untangle a self-intersecting polygon by ordering
+ * vertices angularly around their centroid.
+ */
+export function untanglePolygon(points: Point[]): Point[] {
+  if (points.length < 3) return points;
+  let cx = 0;
+  let cy = 0;
+  for (const p of points) {
+    cx += p.x;
+    cy += p.y;
+  }
+  cx /= points.length;
+  cy /= points.length;
+
+  return points.slice().sort((a, b) => {
+    const angleA = Math.atan2(a.y - cy, a.x - cx);
+    const angleB = Math.atan2(b.y - cy, b.x - cx);
+    return angleA - angleB;
+  });
+}
+
+/**
  * Validates a polygon coordinate array.
  */
 export function validatePolygonCoordinates(vertices: any): {
@@ -171,15 +193,43 @@ export function validatePolygonCoordinates(vertices: any): {
     sanitized.push({ x: Number(pt.x), y: Number(pt.y) });
   }
 
-  const area = calculatePolygonArea(sanitized);
+  // Remove consecutive duplicates
+  const deduped: Point[] = [];
+  for (let i = 0; i < sanitized.length; i++) {
+    const cur = sanitized[i];
+    const prev = deduped[deduped.length - 1];
+    if (!prev || Math.abs(cur.x - prev.x) > 1e-4 || Math.abs(cur.y - prev.y) > 1e-4) {
+      deduped.push(cur);
+    }
+  }
+
+  // Remove redundant closing point if first and last point are identical
+  if (
+    deduped.length > 3 &&
+    Math.abs(deduped[0].x - deduped[deduped.length - 1].x) < 1e-4 &&
+    Math.abs(deduped[0].y - deduped[deduped.length - 1].y) < 1e-4
+  ) {
+    deduped.pop();
+  }
+
+  if (deduped.length < 3) {
+    return { valid: false, error: 'A room polygon requires at least 3 distinct vertices.' };
+  }
+
+  const area = calculatePolygonArea(deduped);
   if (area < 0.1) {
     return { valid: false, error: 'Polygon area is too small or degenerate (collinear vertices).' };
   }
 
-  if (hasSelfIntersections(sanitized)) {
+  if (hasSelfIntersections(deduped)) {
+    // Attempt auto-repair by sorting angularly around centroid
+    const repaired = untanglePolygon(deduped);
+    if (!hasSelfIntersections(repaired) && calculatePolygonArea(repaired) >= 0.1) {
+      return { valid: true, sanitized: repaired };
+    }
     return { valid: false, error: 'Polygon edges cannot self-intersect.' };
   }
 
-  return { valid: true, sanitized };
+  return { valid: true, sanitized: deduped };
 }
 

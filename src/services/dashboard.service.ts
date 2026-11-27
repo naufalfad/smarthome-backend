@@ -389,10 +389,18 @@ export class DashboardService {
       where: { houseId: resolvedId },
       orderBy: { levelNumber: 'asc' },
       include: {
-        floorPlan: true,
+        floorPlan: {
+          include: {
+            objects: {
+              include: {
+                catalogObject: true,
+              },
+            },
+          },
+        },
         rooms: {
           where: { isActive: true },
-          select: { id: true, name: true, type: true, color: true },
+          select: { id: true, name: true, type: true, color: true, ceilingHeight: true, polygonCoordinates: true, areaSquareMeters: true },
         },
         devices: {
           select: { id: true, name: true, type: true, status: true, roomId: true },
@@ -411,10 +419,14 @@ export class DashboardService {
           imagePath: f.floorPlan.imagePath,
           imageWidth: f.floorPlan.imageWidth,
           imageHeight: f.floorPlan.imageHeight,
+          pixelsPerMeter: f.floorPlan.pixelsPerMeter,
+          viewBoxX: f.floorPlan.viewBoxX,
+          viewBoxY: f.floorPlan.viewBoxY,
           viewBoxWidth: f.floorPlan.viewBoxWidth,
           viewBoxHeight: f.floorPlan.viewBoxHeight,
           backgroundOpacity: f.floorPlan.backgroundOpacity,
           isBackgroundVisible: f.floorPlan.isBackgroundVisible,
+          objects: f.floorPlan.objects || [],
         }
         : null,
       roomCount: f.rooms.length,
@@ -488,6 +500,7 @@ export class DashboardService {
         color: r.color || '#3B82F6',
         polygonCoordinates: r.polygonCoordinates,
         areaSquareMeters: r.areaSquareMeters,
+        ceilingHeight: r.ceilingHeight || 3.0,
         deviceCount: roomDevices.length,
         environmental: {
           temperature: currentTemp !== null ? Math.round(currentTemp * 10) / 10 : null,
